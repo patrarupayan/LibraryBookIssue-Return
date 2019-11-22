@@ -1,0 +1,130 @@
+package jdbcDA;
+import java.io.*;
+import java.util.*;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+public class lib {
+	public static void main(String [] args)throws Exception
+	{
+		try {
+			String k;
+			SimpleDateFormat format = new SimpleDateFormat( "MM/dd/yyyy" );
+			java.sql.Date sqlDate;
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+			Connection con = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:orcl","system","password");
+			Statement stmt = con.createStatement();
+			ResultSet rs = stmt.executeQuery("select * from book");	
+			System.out.println("BookID\t\tBookName\t\tAuthor\t\t\tPrice\t\tDomain\t\tStatus");
+			System.out.println("------\t\t--------\t\t------\t\t\t-----\t\t------\t\t------");
+			while(rs.next())
+			{
+				System.out.println(rs.getString(1)+"\t\t"+rs.getString(2)+"\t\t"+rs.getString(3)+"\t\t\t"+rs.getInt(4)+"\t\t"+rs.getString(5)+"\t\t"+rs.getString(6));
+			}		
+			System.out.println();
+			System.out.println("MemberID\tMemberName\t\tEmailID\t\t\tMobile\t\tMax Book Allowed");
+			System.out.println("--------\t----------\t\t-------\t\t\t------\t\t----------------");
+			ResultSet rs1 = stmt.executeQuery("select * from member");
+			while(rs1.next())
+			{
+				System.out.println(rs1.getString(1)+"\t\t"+rs1.getString(2)+"\t\t\t"+rs1.getString(3)+"\t\t"+rs1.getLong(4)+"\t"+rs1.getInt(5));
+			}		
+			BufferedReader br=new BufferedReader(new InputStreamReader(System.in));  
+			do {
+				
+				System.out.println("1.ISSUE BOOK\n2.RETURN BOOK\n3.SHOW STATUS OF BOOK TABLE\n4.DETAILS OF MEMBERS WHO ISSUED BOOKS\n");
+				int n,i,i2;
+				n = Integer.parseInt(br.readLine());
+				String b,m,d;
+				java.util.Date myDate;
+				PreparedStatement stmt1,stmt2,stmt3,stmt4;
+				switch(n)
+				{
+				case 1:
+					String check = null;
+					System.out.println("Enter BookID and MemberID of Member to be issued");
+					b = br.readLine();
+					m = br.readLine();
+					System.out.println("Enter ISSUE DATE MM/dd/yyyy");
+					d = br.readLine();
+					myDate = format.parse( d );
+					stmt4 = con.prepareStatement("select status from book where bookid=?");
+					stmt4.setString(1, b);
+					ResultSet rs8 = stmt4.executeQuery();
+					while(rs8.next())
+					{
+						 check = rs8.getString(1);
+					}
+					if(check.equals("NOT AVAILABLE"))
+					{
+						System.out.println("Book is Not Available");
+						break;
+					}
+					else
+					{
+					stmt2=con.prepareStatement("insert into bookissue values(?,?,?,NULL)");  
+					stmt2.setString(1,b);
+					stmt2.setString(2,m);
+					sqlDate = new java.sql.Date( myDate.getTime() );
+					stmt2.setDate(3, sqlDate);
+					i=stmt2.executeUpdate();  
+					System.out.println(i+" records inserted");  
+					stmt1=con.prepareStatement("update book set status=? where bookid=?");  
+					stmt1.setString(1,"NOT AVAILABLE"); 
+					stmt1.setString(2,b);   
+					i2=stmt1.executeUpdate();  
+					System.out.println(i2+" records updated"); 
+					}
+					break;
+				case 2:
+					System.out.println("Enter BookID and MemberID of Member to be returned");
+					b = br.readLine();
+					m = br.readLine();
+					System.out.println("Enter return DATE MM/dd/yyyy");
+					d = br.readLine();
+					myDate = format.parse( d );
+					stmt2=con.prepareStatement("update bookissue set returned=? WHERE MEMBERID=? and BOOKID=?");  
+					sqlDate = new java.sql.Date( myDate.getTime() );
+					stmt2.setDate(1, sqlDate);
+					stmt2.setString(2,m);
+					stmt2.setString(3, b);
+					i=stmt2.executeUpdate();  
+					System.out.println(i+" records updated");  
+					stmt1=con.prepareStatement("update book set status=? where bookid=?");  
+					stmt1.setString(1,"AVAILABLE"); 
+					stmt1.setString(2,b);    
+					i2=stmt1.executeUpdate();  
+					System.out.println(i2+" records updated");  
+					break;
+				case 3:
+					System.out.println("BOOK ID\t\tBOOK NAME\t\tSTATUS");
+					System.out.println("-------\t\t---------\t\t------");
+					stmt3 = con.prepareStatement("Select bookid,bookname,status from book");
+					ResultSet rs2 = stmt3.executeQuery();
+					while(rs2.next())
+					{
+						System.out.println(rs2.getString(1)+"\t\t"+rs2.getString(2)+"\t\t"+rs2.getString(3));
+					}
+					break;
+				case 4:
+					System.out.println("MEMBER ID\t\tMEMBER NAME\t\tBOOK NAME\t\tISSUE DATE\t\tRETURNED DATE");
+					System.out.println("---------\t\t-----------\t\t---------\t\t----------\t\t-------------");
+					stmt3 = con.prepareStatement("SELECT M.MEMBERID,M.MEMBERNAME,B.BOOKNAME,BI.ISSUEDATE, BI.RETURNED FROM  MEMBER M,BOOK B,BOOKISSUE BI WHERE BI.MEMBERID=M.MEMBERID AND BI.BOOKID=B.BOOKID");
+					ResultSet rs3 = stmt3.executeQuery();
+					while(rs3.next())
+					{
+						System.out.println(rs3.getString(1)+"\t\t\t"+rs3.getString(2)+"\t\t\t"+rs3.getString(3)+"\t\t"+rs3.getDate(4)+"\t\t"+rs3.getDate(5));
+					}
+					break;
+					default:
+						System.out.println("TRY AGAIN/INVALID/");
+				}
+				System.out.println("Do you want to continue: y/n");  
+				k=br.readLine();  
+				if(k=="n"){break;}
+			}while(true);
+			System.out.println("Query executed");
+		      con.close();
+		}
+		catch(Exception e) {
+			System.out.println(e);
+		}}}
